@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.github.yniklas.intellijcodetesterupload</id>
     <name>intellij-codetester-upload</name>
-    <vendor>yniklas</vendor>
+    <vendor>ypsilon</vendor>
 
     <!-- Product and plugin compatibility requirements -->
     <!-- https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
@@ -9,6 +9,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyApplicationService"/>
+        <toolWindow id="allTasks" secondary="true" anchor="right" factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
         <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyProjectService"/>
     </extensions>
 
@@ -16,4 +17,13 @@
         <listener class="com.github.yniklas.intellijcodetesterupload.listeners.MyProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </applicationListeners>
+
+    <actions>
+        <group id="Credentials" text="Codetester">
+            <add-to-group group-id="MainMenu" anchor="last"/>
+            <action class="com.github.yniklas.intellijcodetesterupload.actions.Credentials"
+             id="Credentials.Action" text="Credentials input"/>
+            <action class="com.github.yniklas.intellijcodetesterupload.actions.DefineTask"/>
+        </group>
+    </actions>
 </idea-plugin>
