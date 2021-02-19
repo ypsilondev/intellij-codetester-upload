@@ -229,42 +229,31 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         // Disappear previous results
         myToolWindowContent.remove(scrollPane)
 
-        val panel = JPanel()
-        panel.layout = GridLayout(0, 1)
+        val testResultsRaw = results.get("fileResults").asJsonObject
+        val classResults = ArrayList<ClassResult>()
 
-        scrollPane = JScrollPane(panel)
+        for (className in testResultsRaw.keySet()) {
+            val testResults = ArrayList<TestResult>()
 
+            for (check in testResultsRaw.get(className).asJsonArray) {
+                val checkName = check.asJsonObject.get("check").asString
+                val checkResult = check.asJsonObject.get("result").asString
+                val message = check.asJsonObject.get("message").asString
+                val output = check.asJsonObject.get("output").asJsonArray
+                val errorOutput = check.asJsonObject.get("errorOutput").asString
 
-        val asJsonObject = results.get("fileResults").asJsonObject
-        for (className in asJsonObject.keySet()) {
+                val messages = ArrayList<TestResultMessage>()
+                for (msgRaw in output) {
+                    val msg = msgRaw.asJsonObject
+                    messages.add(TestResultMessage(msg.get("type").asString, msg.get("content").asString))
+                }
 
-            val data = ArrayList<Array<String>>()
-
-            for (check in asJsonObject.get(className).asJsonArray) {
-                var checkName = check.asJsonObject.get("check").asString
-                var checkResult = check.asJsonObject.get("result").asString
-
-                val d = ArrayList<String>()
-                d.add(checkName)
-                d.add(checkResult)
-                data.add(d.toArray() as Array<String>)
-
-                val checkPanel = JPanel()
-                checkPanel.layout = GridLayout(0, 2)
-
-                checkPanel.add(JLabel(checkName))
-                checkPanel.add(JLabel(checkResult))
-
-                panel.add(checkPanel)
+                testResults.add(TestResult(checkName, checkResult, message,
+                    messages.toArray(arrayOf<TestResultMessage>()),
+                    errorOutput))
             }
-            val toArray = data.toArray()
-            val arr = ArrayList<String>()
-            arr.add("Name")
-            arr.add("Result")
 
-            val tab = JTable(toArray as Array<Array<String>>, arr.toArray())
-            tab.setBounds(30, 40, 200, 300)
-            scrollPane.add(tab)
+            classResults.add(ClassResult(className, testResults.toArray(arrayOf<TestResult>())))
         }
 
         // Update UI
