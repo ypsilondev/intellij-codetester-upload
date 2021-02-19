@@ -8,7 +8,7 @@ import com.intellij.ui.content.ContentFactory
 
 class ToolwindoFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val tw = com.github.yniklas.intellijcodetesterupload.toolwindow.ToolWindow(toolWindow)
+        val tw = com.github.yniklas.intellijcodetesterupload.toolwindow.ToolWindow(project, toolWindow)
         val cf = ContentFactory.SERVICE.getInstance()
         val content = cf.createContent(tw.getContent(), "All Tasks", false)
 
