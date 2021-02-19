@@ -1,32 +1,33 @@
 package com.github.yniklas.intellijcodetesterupload.toolwindow
 
-import com.github.yniklas.intellijcodetesterupload.Handler
+import com.github.yniklas.intellijcodetesterupload.data.ClassResult
+import com.github.yniklas.intellijcodetesterupload.data.TestResult
+import com.github.yniklas.intellijcodetesterupload.data.TestResultMessage
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.credentialStore.CredentialAttributes
+import com.intellij.execution.filters.TextConsoleBuilderFactory
+import com.intellij.execution.runners.AbstractConsoleRunnerWithHistory
+import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.rootManager
-import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.StatusBarWidgetProvider
 import com.intellij.openapi.wm.ToolWindow
-import com.sun.jna.StringArray
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.usages.UsageViewManager
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.OutputStream
 import java.util.*
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import javax.print.attribute.standard.Media
 
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -35,6 +36,8 @@ import okhttp3.RequestBody
 import okhttp3.MultipartBody
 
 import okhttp3.OkHttpClient
+import org.intellij.lang.annotations.JdkConstants
+import java.awt.FlowLayout
 import java.awt.GridLayout
 import javax.swing.*
 
@@ -45,6 +48,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val url = "https://codetester.ialistannen.de/login/get-access-token"
     private val urlGetAll = "https://codetester.ialistannen.de/check-category/get-all"
     private val uploadUrl = "https://codetester.ialistannen.de/test/zip/"
+    private val chooseTask = "Choose task"
 
     private val taskSelection = JComboBox(ArrayList<String>().toArray())
     private val cAttr = CredentialAttributes("codetester")
@@ -54,16 +58,17 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     var scrollPane = JScrollPane()
 
     init {
-        taskSelection.addItem("")
+        taskSelection.addItem(chooseTask)
 
         this.project = project
-        getStuff()
-        myToolWindowContent.add(taskSelection)
-        myToolWindowContent.revalidate()
 
+        queryTasks()
+
+        // Initialize the Upload Button
         val testCode = JButton("Test code")
         testCode.addActionListener { testCode() }
 
+        myToolWindowContent.add(taskSelection)
         myToolWindowContent.add(testCode)
         myToolWindowContent.revalidate()
     }
@@ -125,7 +130,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     }
 
     private fun testCode() {
-        if (taskSelection.selectedItem == "") {
+        if (taskSelection.selectedItem == chooseTask) {
             return
         }
 
@@ -148,7 +153,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                     )
                     .build()
                 val request: Request = Request.Builder()
-                    .url("https://codetester.ialistannen.de/test/zip/${tasks[taskSelection.selectedItem]}")
+                    .url(uploadUrl + tasks[taskSelection.selectedItem])
                     .method("POST", body)
                     .addHeader(
                         "Authorization",
@@ -157,35 +162,35 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                     .build()
                 val response = client.newCall(request).execute()
 
-                val parser = JsonParser()
-                val resAsJson = parser.parse(response.body?.string()).asJsonObject
+                val testResults = JsonParser().parse(response.body?.string()).asJsonObject
 
+                // Delete the created zip file
                 removeFile(path)
 
-                showResults(resAsJson)
+                // Show the results in the JPanel
+                showResults(testResults)
             }
         }
     }
 
-    private fun getStuff() {
+    private fun queryTasks() {
         val bearer = getRToken()
 
         if (bearer != null) {
-            val request2 = Request.Builder().url(urlGetAll)
+            val request = Request.Builder().url(urlGetAll)
                 .header("Authorization", "Bearer $bearer").get().build()
 
-            val res2: Response = OkHttpClient().newBuilder().build().newCall(request2).execute()
+            val response: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
+            val responseTasks = JsonParser().parse(response.body?.string()).asJsonArray
 
-            val parser2 = JsonParser()
-            val resAsJson2 = parser2.parse(res2.body?.string()).asJsonArray
+            for (jsonElement in responseTasks) {
+                val taskName = jsonElement.asJsonObject.get("name").asString
+                val taskId = jsonElement.asJsonObject.get("id").asInt;
 
-            for (jsonElement in resAsJson2) {
-                val taskBt = JButton(jsonElement.asJsonObject.get("name").asString)
-                taskBt.addActionListener { Handler.chosenTask = jsonElement.asJsonObject.get("id").asInt }
-
-                if (parseDates(jsonElement.asJsonObject.get("name").asString)) {
-                    taskSelection.addItem(jsonElement.asJsonObject.get("name").asString)
-                    tasks[jsonElement.asJsonObject.get("name").asString] = jsonElement.asJsonObject.get("id").asInt
+                // Show only tasks from this and last year
+                if (parseDates(taskName)) {
+                    taskSelection.addItem(taskName)
+                    tasks[taskName] = taskId
                 }
             }
         }
@@ -193,7 +198,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
     private fun getRToken(): String? {
         if (rToken == null) {
-            Messages.showErrorDialog("You have to sign in first", "Error")
+            Messages.showErrorDialog("You have to sign in before using the 'CodeTester' bridge", "Error")
             return null
         }
 
@@ -202,15 +207,13 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         val request = Request.Builder().url(url).method("POST", body).build()
 
         val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
+        val authenticationObject = JsonParser().parse(res.body?.string()).asJsonObject
 
-        val parser = JsonParser()
-        val resAsJson = parser.parse(res.body?.string()).asJsonObject
-
-        if (!resAsJson.has("token")) {
+        if (!authenticationObject.has("token")) {
             return null
         }
 
-        return resAsJson.get("token").asString
+        return authenticationObject.get("token").asString
     }
 
     fun getContent(): JPanel {
@@ -223,6 +226,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     }
 
     private fun showResults(results: JsonObject) {
+        // Disappear previous results
         myToolWindowContent.remove(scrollPane)
 
         val panel = JPanel()
@@ -262,6 +266,21 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
             tab.setBounds(30, 40, 200, 300)
             scrollPane.add(tab)
         }
+
+        // Update UI
+        val panel = JPanel()
+        panel.layout = BoxLayout(panel, BoxLayout.PAGE_AXIS)
+
+        for (classResult in classResults) {
+            var i = 0
+            Arrays.sort(classResult.results)
+            for (result in classResult.results) {
+                val pane = TestResultPane(result, i++)
+                panel.add(pane)
+            }
+        }
+
+        scrollPane = JBScrollPane(panel)
 
         myToolWindowContent.add(scrollPane)
         myToolWindowContent.revalidate()
