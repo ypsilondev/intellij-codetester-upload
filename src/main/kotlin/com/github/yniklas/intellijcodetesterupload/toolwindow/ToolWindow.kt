@@ -5,15 +5,18 @@ import com.github.yniklas.intellijcodetesterupload.data.TestResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResultMessage
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.protobuf.Message
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.runners.AbstractConsoleRunnerWithHistory
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.ide.passwordSafe.PasswordSafe
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.rootManager
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.StatusBarWidgetProvider
@@ -56,6 +59,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val project: Project
     private val tasks = HashMap<String, Int>()
     var scrollPane = JScrollPane()
+    val testBt = JButton("Test code")
 
     init {
         taskSelection.addItem(chooseTask)
@@ -65,11 +69,10 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         queryTasks()
 
         // Initialize the Upload Button
-        val testCode = JButton("Test code")
-        testCode.addActionListener { testCode() }
+        testBt.addActionListener { Thread { testCode() }.start() }
 
         myToolWindowContent.add(taskSelection)
-        myToolWindowContent.add(testCode)
+        myToolWindowContent.add(testBt)
         myToolWindowContent.revalidate()
     }
 
@@ -77,31 +80,35 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         file.delete()
     }
 
-    private fun getZipStream(): File? {
+    private fun getZipStream(): File {
         val currentFile = FileEditorManager.getInstance(project).selectedFiles[0]
 
         val currentModule = ModuleUtil.findModuleForFile(currentFile, project)
 
-        for (sourceRoot in currentModule?.rootManager?.sourceRoots!!) {
-            sourceRoot.refresh(false, true)
+        val name = currentModule?.name
 
-            val name = currentModule.name
-
-            val file = File(project.basePath, "$name.zip")
-            if (!file.exists()) {
-                file.createNewFile()
-            }
-            val zos = ZipOutputStream(FileOutputStream(file))
-            zos.setLevel(Deflater.DEFAULT_COMPRESSION)
-
-            val data = getSourceContent("", zos, sourceRoot)
-
-            zos.flush()
-            zos.close()
-
-            return file
+        val file = File(project.basePath, "$name.zip")
+        if (!file.exists()) {
+            file.createNewFile()
+        } else {
+            file.delete()
         }
-        return null
+        val zos = ZipOutputStream(FileOutputStream(file))
+        zos.setLevel(Deflater.BEST_COMPRESSION)
+
+        val msr = ProjectRootManager.getInstance(project).fileIndex.getSourceRootForFile(currentFile)
+
+        //for (sourceRoot in currentModule?.rootManager?.sourceRoots!!) {
+        //    sourceRoot.refresh(false, true)
+        //    getSourceContent("", zos, sourceRoot)
+        //}
+        msr?.refresh(false, true)
+        getSourceContent("", zos, msr!!)
+
+        zos.flush()
+        zos.close()
+
+        return file
     }
 
     private fun getSourceContent(path: String, zos: ZipOutputStream, vf: VirtualFile): List<VirtualFile> {
@@ -109,8 +116,12 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
         for (child in vf.children) {
             if (child.isDirectory) {
-                files.addAll(getSourceContent(child.name + "/", zos, child))
+                files.addAll(getSourceContent(path + child.name + "/", zos, child))
             } else {
+                if (child.name.equals("Terminal.java")) {
+                    continue
+                }
+
                 files.add(child)
                 zos.putNextEntry(ZipEntry(path + child.name))
                 val fis = child.inputStream
@@ -133,6 +144,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         if (taskSelection.selectedItem == chooseTask) {
             return
         }
+
+        testBt.isEnabled = false
 
         val bearer = getRToken()
 
@@ -165,7 +178,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 val testResults = JsonParser().parse(response.body?.string()).asJsonObject
 
                 // Delete the created zip file
-                removeFile(path)
+                //removeFile(path)
 
                 // Show the results in the JPanel
                 showResults(testResults)
@@ -229,6 +242,14 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         // Disappear previous results
         myToolWindowContent.remove(scrollPane)
 
+        if (!results.has("fileResults")) {
+            testBt.isEnabled = true
+            ApplicationManager.getApplication().invokeAndWait {
+                Messages.showErrorDialog("Compilation error by 'CodeTester'", "Error")
+            }
+            return
+        }
+
         val testResultsRaw = results.get("fileResults").asJsonObject
         val classResults = ArrayList<ClassResult>()
 
@@ -272,6 +293,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         scrollPane = JBScrollPane(panel)
 
         myToolWindowContent.add(scrollPane)
+        testBt.isEnabled = true
         myToolWindowContent.revalidate()
+        myToolWindowContent.repaint()
     }
 }

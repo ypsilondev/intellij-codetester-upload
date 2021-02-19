@@ -9,7 +9,7 @@ class ToolwindoFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val tw = ToolWindow(project, toolWindow)
         val cf = ContentFactory.SERVICE.getInstance()
-        val content = cf.createContent(tw.getContent(), "All Tasks", false)
+        val content = cf.createContent(tw.getContent(), "Basic Tests", false)
 
 
 

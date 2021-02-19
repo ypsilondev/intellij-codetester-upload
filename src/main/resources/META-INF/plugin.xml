@@ -9,7 +9,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyApplicationService"/>
-        <toolWindow id="allTasks" secondary="true" anchor="right" factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
+        <toolWindow id="CodeTester" secondary="false" anchor="right" factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
         <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyProjectService"/>
     </extensions>
 
