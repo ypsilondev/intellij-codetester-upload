@@ -51,7 +51,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
     private val taskSelection = JComboBox(ArrayList<String>().toArray())
     private val cAttr = CredentialAttributes("codetester")
-    private val rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
+    private var rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
     private val project: Project
     private val tasks = HashMap<String, Int>()
     private val testBt = JButton("Test code")
@@ -215,6 +215,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
             }
         }
 
+        rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
+
         val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("refreshToken", rToken!!).build()
         val request = Request.Builder().url(url).method("POST", body).build()
@@ -233,7 +235,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("username", username)
             .addFormDataPart("password", password).build()
-        val request = Request.Builder().url("https://codetester.ialistannen.de/login/")
+        val request = Request.Builder().url("https://codetester.ialistannen.de/login")
             .method("POST", body).build()
 
         val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
