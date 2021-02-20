@@ -169,6 +169,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 )
                 .build()
             val response = client.newCall(request).execute()
+            testBt.isEnabled = true
 
             val testResults = JsonParser().parse(response.body?.string()).asJsonObject
 
@@ -326,17 +327,15 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                         }
 
                         val cw = getConsoleWindow(toolWindow, result.title)
-                        if (cw != null) {
-                            var type: ConsoleViewContentType = ConsoleViewContentType.NORMAL_OUTPUT
-                            for (trm in result.output) {
-                                when (trm.type) {
-                                    "OTHER" -> type = ConsoleViewContentType.LOG_INFO_OUTPUT
-                                    "INPUT" -> type = ConsoleViewContentType.USER_INPUT
-                                    "OUTPUT" -> type = ConsoleViewContentType.NORMAL_OUTPUT
-                                    "ERROR" -> type = ConsoleViewContentType.ERROR_OUTPUT
-                                }
-                                cw.print(trm.content + "\n", type)
+                        var type: ConsoleViewContentType = ConsoleViewContentType.NORMAL_OUTPUT
+                        for (trm in result.output) {
+                            when (trm.type) {
+                                "OTHER" -> type = ConsoleViewContentType.LOG_INFO_OUTPUT
+                                "INPUT" -> type = ConsoleViewContentType.USER_INPUT
+                                "OUTPUT" -> type = ConsoleViewContentType.NORMAL_OUTPUT
+                                "ERROR" -> type = ConsoleViewContentType.ERROR_OUTPUT
                             }
+                            cw.print(trm.content + "\n", type)
                         }
                     }
 
@@ -345,13 +344,6 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
             }
 
         }
-
-        scrollPane = JBScrollPane(panel)
-
-        myToolWindowContent.add(scrollPane)
-        testBt.isEnabled = true
-        myToolWindowContent.revalidate()
-        myToolWindowContent.repaint()
     }
 
     fun getToolWindow(id: String) : ToolWindow {
