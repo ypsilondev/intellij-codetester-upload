@@ -11,8 +11,6 @@ class ToolwindoFactory : ToolWindowFactory {
         val cf = ContentFactory.SERVICE.getInstance()
         val content = cf.createContent(tw.getContent(), "Basic Tests", false)
 
-
-
         toolWindow.contentManager.addContent(content)
     }
 }

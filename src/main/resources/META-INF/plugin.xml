@@ -13,17 +13,4 @@
         <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyProjectService"/>
     </extensions>
 
-    <applicationListeners>
-        <listener class="com.github.yniklas.intellijcodetesterupload.listeners.MyProjectManagerListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
-
-    <actions>
-        <group id="Credentials" text="Codetester">
-            <add-to-group group-id="MainMenu" anchor="last"/>
-            <action class="com.github.yniklas.intellijcodetesterupload.actions.Credentials"
-             id="Credentials.Action" text="Credentials input"/>
-            <action class="com.github.yniklas.intellijcodetesterupload.actions.DefineTask"/>
-        </group>
-    </actions>
 </idea-plugin>

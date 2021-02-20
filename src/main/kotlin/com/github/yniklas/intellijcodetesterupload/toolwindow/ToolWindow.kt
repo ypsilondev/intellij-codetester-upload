@@ -152,37 +152,35 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         if (bearer != null) {
             val path = getZipStream()
 
-            if (path != null) {
-                val client = OkHttpClient().newBuilder()
-                    .build()
+            val client = OkHttpClient().newBuilder()
+                .build()
 
-                val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-                    .addFormDataPart(
-                        "file", "",
-                        RequestBody.create(
-                            "application/octet-stream".toMediaTypeOrNull(),
-                            path
-                        )
+            val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file", "",
+                    RequestBody.create(
+                        "application/octet-stream".toMediaTypeOrNull(),
+                        path
                     )
-                    .build()
-                val request: Request = Request.Builder()
-                    .url(uploadUrl + tasks[taskSelection.selectedItem])
-                    .method("POST", body)
-                    .addHeader(
-                        "Authorization",
-                        "Bearer $bearer"
-                    )
-                    .build()
-                val response = client.newCall(request).execute()
+                )
+                .build()
+            val request: Request = Request.Builder()
+                .url(uploadUrl + tasks[taskSelection.selectedItem])
+                .method("POST", body)
+                .addHeader(
+                    "Authorization",
+                    "Bearer $bearer"
+                )
+                .build()
+            val response = client.newCall(request).execute()
 
-                val testResults = JsonParser().parse(response.body?.string()).asJsonObject
+            val testResults = JsonParser().parse(response.body?.string()).asJsonObject
 
-                // Delete the created zip file
-                //removeFile(path)
+            // Delete the created zip file
+            //removeFile(path)
 
-                // Show the results in the JPanel
-                showResults(testResults)
-            }
+            // Show the results in the JPanel
+            showResults(testResults)
         }
     }
 
@@ -211,12 +209,18 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
     private fun getRToken(): String? {
         if (rToken == null) {
-            Messages.showErrorDialog("You have to sign in before using the 'CodeTester' bridge", "Error")
-            return null
+            val username = Messages.showInputDialog(project, "Input username", "Credentials",
+                Messages.getInformationIcon())
+            val password = Messages.showPasswordDialog(project, "Input password", "Credentials",
+                Messages.getInformationIcon())
+
+            if (username == null || password == null || !validate(username, password)) {
+                return null
+            }
         }
 
         val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart("refreshToken", rToken).build()
+            .addFormDataPart("refreshToken", rToken!!).build()
         val request = Request.Builder().url(url).method("POST", body).build()
 
         val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
@@ -227,6 +231,30 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         }
 
         return authenticationObject.get("token").asString
+    }
+
+    private fun validate(username: String, password: String): Boolean {
+        val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("username", username)
+            .addFormDataPart("password", password).build()
+        val request = Request.Builder().url(url).method("POST", body).build()
+
+        val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
+
+        val parser = JsonParser()
+        val resAsJson = parser.parse(res.body?.string()).asJsonObject
+
+        if (resAsJson.has("error")) {
+            Messages.showErrorDialog(resAsJson.get("error").asString, "Error")
+            return false
+        } else if (resAsJson.has("token")) {
+            val cAttr = CredentialAttributes("codetester")
+            val creds = Credentials("token",resAsJson.get("token").asString)
+
+            PasswordSafe.instance.set(cAttr, creds)
+            return true
+        }
+        return false
     }
 
     fun getContent(): JPanel {
