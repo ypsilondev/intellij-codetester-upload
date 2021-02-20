@@ -42,6 +42,7 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.awt.Color
 import java.awt.Container
+import java.net.SocketTimeoutException
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.swing.JComponent
@@ -51,7 +52,6 @@ import javax.swing.BoxLayout
 import javax.swing.ScrollPaneConstants
 
 class ToolWindow(project: Project, toolWindow: ToolWindow) {
-
     companion object {
         private const val TIMEOUT = 30L
         private const val BYTE_ARRAY_SIZE = 4092
@@ -61,14 +61,10 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val contentPane: Container = JPanel()
     var scrollPane = JBScrollPane()
 
-    private val url = "https://codetester.ialistannen.de/login/get-access-token"
-    private val urlGetAll = "https://codetester.ialistannen.de/check-category/get-all"
     private val uploadUrl = "https://codetester.ialistannen.de/test/zip/"
-    private val chooseTask = "Choose task"
+    private val chooseTask = "Choose Task"
 
     private val taskSelection = ComboBox(ArrayList<String>().toArray())
-    private val cAttr = CredentialAttributes("codetester")
-    private var rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
     private val project: Project
     private val tasks = HashMap<String, Int>()
     private val testBt = JButton("Test code")
@@ -96,7 +92,9 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         val selectedFiles = FileEditorManager.getInstance(project).selectedFiles
 
         if (selectedFiles.isEmpty()) {
-            Messages.showErrorDialog("Choose a project by opening a source file", "Error No Module")
+            ApplicationManager.getApplication().invokeAndWait {
+                Messages.showErrorDialog("Choose a project by opening a source file", "Error No Module")
+            }
         }
 
         val currentFile = selectedFiles[0]
@@ -159,9 +157,11 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
             return
         }
 
+        // Disappear previous results
+        toolWindowPane.remove(scrollPane)
         testBt.isEnabled = false
 
-        val bearer = getRToken()
+        val bearer = Network.getRToken(project)
 
         if (bearer != null) {
             val path = getZipStream()
@@ -183,107 +183,46 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                     "Bearer $bearer"
                 )
                 .build()
-            val response = client.newCall(request).execute()
-            val responseBody = response.body
-            testBt.isEnabled = true
 
-            if (responseBody != null) {
-                val testResults = JsonParser.parseString(responseBody.string()).asJsonObject
-                showResults(testResults)
+            try {
+                val response = client.newCall(request).execute()
+                val responseBody = response.body
+
+                if (responseBody != null) {
+                    val testResults = JsonParser.parseString(responseBody.string()).asJsonObject
+                    showResults(testResults)
+                }
+            } catch (e: SocketTimeoutException) {
+                ApplicationManager.getApplication().invokeAndWait {
+                    Messages.showErrorDialog("Timeout by 'CodeTester'", "Error")
+                }
+            } finally {
+                testBt.isEnabled = true
             }
         }
     }
 
     private fun queryTasks() {
-        val bearer = getRToken()
+        val responseTasks = Network.queryTasks(project)
 
-        if (bearer != null) {
-            val request = Request.Builder().url(urlGetAll)
-                .header("Authorization", "Bearer $bearer").get().build()
-
-            val response: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
-            val responseTasks = JsonParser.parseString(response.body?.string()).asJsonArray
-
-            for (jsonElement in responseTasks) {
-                val taskName = jsonElement.asJsonObject.get("name").asString
-                val taskId = jsonElement.asJsonObject.get("id").asInt;
-
-                // Show only tasks from this and last year
-                if (parseDates(taskName)) {
-                    taskSelection.addItem(taskName)
-                    tasks[taskName] = taskId
-                }
-            }
-        }
-    }
-
-    private fun getRToken(): String? {
-        if (rToken == null) {
-            val username = Messages.showInputDialog(project, "Input username", "Credentials",
-                Messages.getInformationIcon())
-            val password = Messages.showPasswordDialog(project, "Input password", "Credentials",
-                Messages.getInformationIcon())
-
-            if (username == null || password == null || !validate(username, password)) {
-                return null
+        for (jsonElement in responseTasks) {
+            val taskName = jsonElement.asJsonObject.get("name").asString
+            val taskId = jsonElement.asJsonObject.get("id").asInt;
+            // Show only tasks from this and last year
+            if (Network.parseDates(taskName)) {
+                taskSelection.addItem(taskName)
+                tasks[taskName] = taskId
             }
         }
 
-        rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
-
-        val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart("refreshToken", rToken!!).build()
-        val request = Request.Builder().url(url).method("POST", body).build()
-
-        val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
-        val authenticationObject = JsonParser.parseString(res.body?.string()).asJsonObject
-
-        if (!authenticationObject.has("token")) {
-            return null
-        }
-
-        return authenticationObject.get("token").asString
-    }
-
-    private fun validate(username: String, password: String): Boolean {
-        val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
-            .addFormDataPart("username", username)
-            .addFormDataPart("password", password).build()
-        val request = Request.Builder().url("https://codetester.ialistannen.de/login")
-            .method("POST", body).build()
-
-        val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
-
-        val resAsJson = JsonParser.parseString(res.body?.string()).asJsonObject
-
-        if (resAsJson.has("error")) {
-            Messages.showErrorDialog(resAsJson.get("error").asString, "Error")
-        } else if (resAsJson.has("token")) {
-            val cAttr = CredentialAttributes("codetester")
-            val creds = Credentials("token",resAsJson.get("token").asString)
-
-            PasswordSafe.instance.set(cAttr, creds)
-            return true
-        }
-        return false
     }
 
     fun getContent(): JComponent {
         return toolWindowPane
-        //return myToolWindowContent
-    }
-
-    private fun parseDates(dateString: String): Boolean {
-        return dateString.contains(Calendar.getInstance().get(Calendar.YEAR).toString())
-                || dateString.contains((Calendar.getInstance().get(Calendar.YEAR) - 1).toString())
     }
 
     private fun showResults(results: JsonObject) {
-        // Disappear previous results
-        toolWindowPane.remove(scrollPane)
-
         if (!results.has("fileResults")) {
-            testBt.isEnabled = true
             ApplicationManager.getApplication().invokeAndWait {
                 Messages.showErrorDialog("Compilation error by 'CodeTester'", "Error")
             }
