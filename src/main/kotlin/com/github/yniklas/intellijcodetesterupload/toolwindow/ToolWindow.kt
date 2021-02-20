@@ -168,16 +168,13 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                     "Bearer $bearer"
                 )
                 .build()
-            val response = client.newCall(request).execute()
-            testBt.isEnabled = true
-
-            val testResults = JsonParser().parse(response.body?.string()).asJsonObject
-
-            // Delete the created zip file
-            //removeFile(path)
-
-            // Show the results in the JPanel
-            showResults(testResults)
+            try {
+                val response = client.newCall(request).execute()
+                val testResults = JsonParser().parse(response.body?.string()).asJsonObject
+                showResults(testResults)
+            } catch (e: NullPointerException) {
+                testBt.isEnabled = true
+            }
         }
     }
 
