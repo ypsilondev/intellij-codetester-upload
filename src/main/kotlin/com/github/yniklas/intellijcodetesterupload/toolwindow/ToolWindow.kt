@@ -85,8 +85,6 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         // Initialize the Upload Button
         testBt.addActionListener { Thread { testCode() }.start() }
 
-        toolWindowPane.background = Color.GREEN
-        println(toolWindowPane.height)
         contentPane.add(taskSelection)
         contentPane.add(testBt)
         toolWindowPane.add(contentPane)
@@ -95,7 +93,13 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     }
 
     private fun getZipStream(): File {
-        val currentFile = FileEditorManager.getInstance(project).selectedFiles[0]
+        val selectedFiles = FileEditorManager.getInstance(project).selectedFiles
+
+        if (selectedFiles.isEmpty()) {
+            Messages.showErrorDialog("Choose a project by opening a source file", "Error No Module")
+        }
+
+        val currentFile = selectedFiles[0]
 
         val currentModule = ModuleUtil.findModuleForFile(currentFile, project)
 
@@ -181,10 +185,9 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 .build()
             val response = client.newCall(request).execute()
             val responseBody = response.body
+            testBt.isEnabled = true
 
-            if (responseBody == null) {
-                testBt.isEnabled = true
-            } else {
+            if (responseBody != null) {
                 val testResults = JsonParser.parseString(responseBody.string()).asJsonObject
                 showResults(testResults)
             }
@@ -324,12 +327,15 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
             ToolWindowManager.getInstance(project).getToolWindow("CodeTester test details")?.remove()
 
+            toolWindowPane.background = Color.GREEN
+
             for (classResult in classResults) {
                 Arrays.sort(classResult.results)
                 for ((i, result) in classResult.results.withIndex()) {
                     val pane = TestResultPane(result, i)
 
                     if (result.result == "FAILED") {
+                        toolWindowPane.background = Color.RED
 
                         if (toolWindow == null) {
                             toolWindow = getToolWindow()
