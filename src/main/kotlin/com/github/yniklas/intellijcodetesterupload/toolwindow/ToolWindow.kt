@@ -233,7 +233,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("username", username)
             .addFormDataPart("password", password).build()
-        val request = Request.Builder().url(url).method("POST", body).build()
+        val request = Request.Builder().url("https://codetester.ialistannen.de/login/")
+            .method("POST", body).build()
 
         val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
 
