@@ -8,6 +8,11 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.CodeTesterSetting"/>
+        <projectConfigurable parentId="tools" instance="com.github.yniklas.intellijcodetesterupload.services.CodeTesterSettingsConfigurable"
+                             id="org.company.ProjectSettingsConfigurable" displayName="Code Tester Settings"
+                             nonDefaultProject="true"/>
+        <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.ProjectService"/>
         <toolWindow id="CodeTester" secondary="false" anchor="right" icon="AllIcons.Actions.Colors" factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
     </extensions>
 
