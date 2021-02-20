@@ -8,9 +8,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyApplicationService"/>
-        <toolWindow id="CodeTester" secondary="false" anchor="right" factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
-        <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.MyProjectService"/>
+        <toolWindow id="CodeTester" secondary="false" anchor="right" icon="AllIcons.Actions.Colors" factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
     </extensions>
 
 </idea-plugin>

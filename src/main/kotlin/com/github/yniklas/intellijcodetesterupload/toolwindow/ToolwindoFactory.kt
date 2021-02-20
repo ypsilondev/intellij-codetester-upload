@@ -13,4 +13,9 @@ class ToolwindoFactory : ToolWindowFactory {
 
         toolWindow.contentManager.addContent(content)
     }
+
+    override fun isApplicable(project: Project): Boolean {
+        return true // TODO
+    }
+
 }

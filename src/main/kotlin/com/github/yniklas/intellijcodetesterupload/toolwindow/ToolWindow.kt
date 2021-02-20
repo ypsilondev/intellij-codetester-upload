@@ -5,24 +5,23 @@ import com.github.yniklas.intellijcodetesterupload.data.TestResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResultMessage
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.google.protobuf.Message
 import com.intellij.credentialStore.CredentialAttributes
+import com.intellij.credentialStore.Credentials
 import com.intellij.execution.filters.TextConsoleBuilderFactory
-import com.intellij.execution.runners.AbstractConsoleRunnerWithHistory
+import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.icons.AllIcons
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.rootManager
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.StatusBarWidgetProvider
+import com.intellij.openapi.wm.*
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.usages.UsageViewManager
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.io.File
@@ -39,9 +38,6 @@ import okhttp3.RequestBody
 import okhttp3.MultipartBody
 
 import okhttp3.OkHttpClient
-import org.intellij.lang.annotations.JdkConstants
-import java.awt.FlowLayout
-import java.awt.GridLayout
 import javax.swing.*
 
 
@@ -58,8 +54,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
     private val project: Project
     private val tasks = HashMap<String, Int>()
+    private val testBt = JButton("Test code")
     var scrollPane = JScrollPane()
-    val testBt = JButton("Test code")
 
     init {
         taskSelection.addItem(chooseTask)
@@ -309,13 +305,42 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         val panel = JPanel()
         panel.layout = BoxLayout(panel, BoxLayout.PAGE_AXIS)
 
-        for (classResult in classResults) {
-            var i = 0
-            Arrays.sort(classResult.results)
-            for (result in classResult.results) {
-                val pane = TestResultPane(result, i++)
-                panel.add(pane)
+        ApplicationManager.getApplication().invokeAndWait {
+
+            var toolWindow: ToolWindow? = null
+
+            ToolWindowManager.getInstance(project).getToolWindow("CodeTester test details")?.remove()
+
+            for (classResult in classResults) {
+                Arrays.sort(classResult.results)
+                for ((i, result) in classResult.results.withIndex()) {
+                    val pane = TestResultPane(result, i)
+
+                    if (result.result == "FAILED") {
+
+                        if (toolWindow == null) {
+                            toolWindow = getToolWindow("CodeTester test details")
+                        }
+
+                        val cw = getConsoleWindow(toolWindow, result.title)
+                        if (cw != null) {
+                            var type: ConsoleViewContentType = ConsoleViewContentType.NORMAL_OUTPUT
+                            for (trm in result.output) {
+                                when (trm.type) {
+                                    "OTHER" -> type = ConsoleViewContentType.LOG_INFO_OUTPUT
+                                    "INPUT" -> type = ConsoleViewContentType.USER_INPUT
+                                    "OUTPUT" -> type = ConsoleViewContentType.NORMAL_OUTPUT
+                                    "ERROR" -> type = ConsoleViewContentType.ERROR_OUTPUT
+                                }
+                                cw.print(trm.content + "\n", type)
+                            }
+                        }
+                    }
+
+                    panel.add(pane)
+                }
             }
+
         }
 
         scrollPane = JBScrollPane(panel)
@@ -325,4 +350,24 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         myToolWindowContent.revalidate()
         myToolWindowContent.repaint()
     }
+
+    fun getToolWindow(id: String) : ToolWindow {
+        return ToolWindowManager.getInstance(project).getToolWindow("CodeTester test details")
+            ?: ToolWindowManager.getInstance(project)
+                .registerToolWindow(
+                    RegisterToolWindowTask.closable(
+                        "CodeTester test details",
+                        AllIcons.Actions.QuickfixBulb, ToolWindowAnchor.BOTTOM
+                    )
+                )
+    }
+
+    fun getConsoleWindow(toolWindow: ToolWindow, name: String) : ConsoleView? {
+        val consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).console
+        val content = toolWindow.contentManager.factory.createContent(consoleView.component, name, false);
+        toolWindow.contentManager.addContent(content)
+
+        return consoleView
+    }
+
 }
