@@ -17,16 +17,21 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.*
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.components.JBScrollPane
-import okhttp3.*
+import okhttp3.Request
+import okhttp3.Response
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.io.File
 import java.io.FileOutputStream
-import java.util.*
+import java.util.LinkedList
+import java.util.Date
+import java.util.Arrays
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -38,8 +43,12 @@ import okhttp3.RequestBody
 import okhttp3.MultipartBody
 
 import okhttp3.OkHttpClient
-import javax.swing.*
-
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.awt.Dimension
+import java.lang.NullPointerException
+import javax.swing.JButton
+import javax.swing.JPanel
+import javax.swing.BoxLayout
 
 class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val myToolWindowContent: JPanel = JPanel()
@@ -49,13 +58,14 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val uploadUrl = "https://codetester.ialistannen.de/test/zip/"
     private val chooseTask = "Choose task"
 
-    private val taskSelection = JComboBox(ArrayList<String>().toArray())
+    private val taskSelection = ComboBox(ArrayList<String>().toArray())
     private val cAttr = CredentialAttributes("codetester")
     private var rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
     private val project: Project
     private val tasks = HashMap<String, Int>()
     private val testBt = JButton("Test code")
-    var scrollPane = JScrollPane()
+    var scrollPane = JBScrollPane()
+    private val tw: ToolWindow = toolWindow
 
     init {
         taskSelection.addItem(chooseTask)
@@ -70,10 +80,6 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         myToolWindowContent.add(taskSelection)
         myToolWindowContent.add(testBt)
         myToolWindowContent.revalidate()
-    }
-
-    private fun removeFile(file: File) {
-        file.delete()
     }
 
     private fun getZipStream(): File {
@@ -123,7 +129,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 val fis = child.inputStream
 
                 val buffer = ByteArray(4092)
-                var byteCount = 0
+                var byteCount: Int
                 while (fis.read(buffer).also { byteCount = it } != -1) {
                     zos.write(buffer, 0, byteCount)
                 }
@@ -154,10 +160,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
             val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
                 .addFormDataPart(
                     "file", "",
-                    RequestBody.create(
-                        "application/octet-stream".toMediaTypeOrNull(),
-                        path
-                    )
+                    path
+                        .asRequestBody("application/octet-stream".toMediaTypeOrNull())
                 )
                 .build()
             val request: Request = Request.Builder()
@@ -320,7 +324,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                     if (result.result == "FAILED") {
 
                         if (toolWindow == null) {
-                            toolWindow = getToolWindow("CodeTester test details")
+                            toolWindow = getToolWindow()
                         }
 
                         val cw = getConsoleWindow(toolWindow, result.title)
@@ -340,10 +344,20 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 }
             }
 
+            panel.revalidate()
+
+            scrollPane = JBScrollPane(panel)
+            scrollPane.preferredSize = Dimension(500,700)
+
+
+            myToolWindowContent.add(scrollPane)
+            testBt.isEnabled = true
+            myToolWindowContent.revalidate()
+            myToolWindowContent.repaint()
         }
     }
 
-    fun getToolWindow(id: String) : ToolWindow {
+    private fun getToolWindow() : ToolWindow {
         return ToolWindowManager.getInstance(project).getToolWindow("CodeTester test details")
             ?: ToolWindowManager.getInstance(project)
                 .registerToolWindow(
@@ -354,9 +368,9 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 )
     }
 
-    fun getConsoleWindow(toolWindow: ToolWindow, name: String) : ConsoleView? {
+    private fun getConsoleWindow(toolWindow: ToolWindow, name: String) : ConsoleView {
         val consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).console
-        val content = toolWindow.contentManager.factory.createContent(consoleView.component, name, false);
+        val content = toolWindow.contentManager.factory.createContent(consoleView.component, name, false)
         toolWindow.contentManager.addContent(content)
 
         return consoleView

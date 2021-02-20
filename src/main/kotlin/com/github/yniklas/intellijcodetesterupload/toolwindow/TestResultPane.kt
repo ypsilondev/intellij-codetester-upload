@@ -1,9 +1,9 @@
 package com.github.yniklas.intellijcodetesterupload.toolwindow
 
 import com.github.yniklas.intellijcodetesterupload.data.TestResult
-import java.awt.*
-import java.util.concurrent.Flow
-import javax.swing.BoxLayout
+import java.awt.GridBagLayout
+import java.awt.GridBagConstraints
+import java.awt.Color
 import javax.swing.JLabel
 import javax.swing.JPanel
 
@@ -19,21 +19,20 @@ class TestResultPane(testResult: TestResult, count: Int) : JPanel() {
         c.gridx = 0
         c.weightx = 0.8
 
-        add(JLabel("${testResult.title}", null, JLabel.LEFT), c)
+        add(JLabel(testResult.title, null, JLabel.LEFT), c)
 
         c.gridx = 3
         c.fill = GridBagConstraints.HORIZONTAL
-        var jLabel = JLabel(testResult.result, null, JLabel.RIGHT)
-        if (testResult.result.equals("FAILED")) {
-            jLabel.foreground = Color.RED
+        val resultLabel = JLabel(testResult.result, null, JLabel.RIGHT)
+        if (testResult.result == "FAILED") {
+            resultLabel.foreground = Color.RED
         } else {
-            jLabel.foreground = Color.GREEN
+            resultLabel.foreground = Color.GREEN
         }
-        add(jLabel, c)
-        //for (trm in testResult.output) {
-        //    add(TestResultMessagePane(trm))
-        //}
+        add(resultLabel, c)
+
         validate()
+        repaint()
     }
 
 }
