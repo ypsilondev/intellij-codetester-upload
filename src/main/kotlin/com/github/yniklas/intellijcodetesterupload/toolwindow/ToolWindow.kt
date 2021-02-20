@@ -22,16 +22,12 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.*
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.components.JBScrollPane
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.io.File
 import java.io.FileOutputStream
-import java.util.LinkedList
-import java.util.Date
-import java.util.Arrays
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -44,14 +40,26 @@ import okhttp3.MultipartBody
 
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.asRequestBody
-import java.awt.Dimension
-import java.lang.NullPointerException
-import javax.swing.JButton
+import java.awt.Color
+import java.awt.Container
+import java.util.*
+import java.util.concurrent.TimeUnit
+import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JButton
 import javax.swing.BoxLayout
+import javax.swing.ScrollPaneConstants
 
 class ToolWindow(project: Project, toolWindow: ToolWindow) {
-    private val myToolWindowContent: JPanel = JPanel()
+
+    companion object {
+        private const val TIMEOUT = 30L
+        private const val BYTE_ARRAY_SIZE = 4092
+    }
+
+    private val toolWindowPane: JComponent = JPanel()
+    private val contentPane: Container = JPanel()
+    var scrollPane = JBScrollPane()
 
     private val url = "https://codetester.ialistannen.de/login/get-access-token"
     private val urlGetAll = "https://codetester.ialistannen.de/check-category/get-all"
@@ -64,22 +72,26 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     private val project: Project
     private val tasks = HashMap<String, Int>()
     private val testBt = JButton("Test code")
-    var scrollPane = JBScrollPane()
-    private val tw: ToolWindow = toolWindow
 
     init {
         taskSelection.addItem(chooseTask)
 
         this.project = project
 
+        toolWindowPane.layout = BoxLayout(toolWindowPane, BoxLayout.PAGE_AXIS)
+
         queryTasks()
 
         // Initialize the Upload Button
         testBt.addActionListener { Thread { testCode() }.start() }
 
-        myToolWindowContent.add(taskSelection)
-        myToolWindowContent.add(testBt)
-        myToolWindowContent.revalidate()
+        toolWindowPane.background = Color.GREEN
+        println(toolWindowPane.height)
+        contentPane.add(taskSelection)
+        contentPane.add(testBt)
+        toolWindowPane.add(contentPane)
+
+        toolWindowPane.revalidate()
     }
 
     private fun getZipStream(): File {
@@ -100,10 +112,6 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
         val msr = ProjectRootManager.getInstance(project).fileIndex.getSourceRootForFile(currentFile)
 
-        //for (sourceRoot in currentModule?.rootManager?.sourceRoots!!) {
-        //    sourceRoot.refresh(false, true)
-        //    getSourceContent("", zos, sourceRoot)
-        //}
         msr?.refresh(false, true)
         getSourceContent("", zos, msr!!)
 
@@ -120,7 +128,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
             if (child.isDirectory) {
                 files.addAll(getSourceContent(path + child.name + "/", zos, child))
             } else {
-                if (child.name.equals("Terminal.java")) {
+                if (child.name == "Terminal.java") {
                     continue
                 }
 
@@ -128,7 +136,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 zos.putNextEntry(ZipEntry(path + child.name))
                 val fis = child.inputStream
 
-                val buffer = ByteArray(4092)
+                val buffer = ByteArray(BYTE_ARRAY_SIZE)
                 var byteCount: Int
                 while (fis.read(buffer).also { byteCount = it } != -1) {
                     zos.write(buffer, 0, byteCount)
@@ -154,8 +162,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         if (bearer != null) {
             val path = getZipStream()
 
-            val client = OkHttpClient().newBuilder()
-                .build()
+            val client = OkHttpClient().newBuilder().connectTimeout(TIMEOUT, TimeUnit.SECONDS).build()
 
             val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
                 .addFormDataPart(
@@ -172,12 +179,14 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                     "Bearer $bearer"
                 )
                 .build()
-            try {
-                val response = client.newCall(request).execute()
-                val testResults = JsonParser().parse(response.body?.string()).asJsonObject
-                showResults(testResults)
-            } catch (e: NullPointerException) {
+            val response = client.newCall(request).execute()
+            val responseBody = response.body
+
+            if (responseBody == null) {
                 testBt.isEnabled = true
+            } else {
+                val testResults = JsonParser.parseString(responseBody.string()).asJsonObject
+                showResults(testResults)
             }
         }
     }
@@ -190,7 +199,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 .header("Authorization", "Bearer $bearer").get().build()
 
             val response: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
-            val responseTasks = JsonParser().parse(response.body?.string()).asJsonArray
+            val responseTasks = JsonParser.parseString(response.body?.string()).asJsonArray
 
             for (jsonElement in responseTasks) {
                 val taskName = jsonElement.asJsonObject.get("name").asString
@@ -224,7 +233,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         val request = Request.Builder().url(url).method("POST", body).build()
 
         val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
-        val authenticationObject = JsonParser().parse(res.body?.string()).asJsonObject
+        val authenticationObject = JsonParser.parseString(res.body?.string()).asJsonObject
 
         if (!authenticationObject.has("token")) {
             return null
@@ -242,12 +251,10 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
         val res: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
 
-        val parser = JsonParser()
-        val resAsJson = parser.parse(res.body?.string()).asJsonObject
+        val resAsJson = JsonParser.parseString(res.body?.string()).asJsonObject
 
         if (resAsJson.has("error")) {
             Messages.showErrorDialog(resAsJson.get("error").asString, "Error")
-            return false
         } else if (resAsJson.has("token")) {
             val cAttr = CredentialAttributes("codetester")
             val creds = Credentials("token",resAsJson.get("token").asString)
@@ -258,18 +265,19 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         return false
     }
 
-    fun getContent(): JPanel {
-        return myToolWindowContent
+    fun getContent(): JComponent {
+        return toolWindowPane
+        //return myToolWindowContent
     }
 
     private fun parseDates(dateString: String): Boolean {
-        return dateString.contains((1900 + Date().year).toString())
-                || dateString.contains((1899 + Date().year).toString())
+        return dateString.contains(Calendar.getInstance().get(Calendar.YEAR).toString())
+                || dateString.contains((Calendar.getInstance().get(Calendar.YEAR) - 1).toString())
     }
 
     private fun showResults(results: JsonObject) {
         // Disappear previous results
-        myToolWindowContent.remove(scrollPane)
+        toolWindowPane.remove(scrollPane)
 
         if (!results.has("fileResults")) {
             testBt.isEnabled = true
@@ -344,16 +352,12 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 }
             }
 
-            panel.revalidate()
+            scrollPane = JBScrollPane(panel,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED)
 
-            scrollPane = JBScrollPane(panel)
-            scrollPane.preferredSize = Dimension(500,700)
-
-
-            myToolWindowContent.add(scrollPane)
-            testBt.isEnabled = true
-            myToolWindowContent.revalidate()
-            myToolWindowContent.repaint()
+            toolWindowPane.add(scrollPane)
+            toolWindowPane.revalidate()
         }
     }
 
@@ -368,12 +372,11 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
                 )
     }
 
-    private fun getConsoleWindow(toolWindow: ToolWindow, name: String) : ConsoleView {
+    private fun getConsoleWindow(toolWindow: ToolWindow, name: String): ConsoleView {
         val consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).console
         val content = toolWindow.contentManager.factory.createContent(consoleView.component, name, false)
         toolWindow.contentManager.addContent(content)
 
         return consoleView
     }
-
 }

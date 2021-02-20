@@ -34,5 +34,4 @@ class TestResultPane(testResult: TestResult, count: Int) : JPanel() {
         validate()
         repaint()
     }
-
 }

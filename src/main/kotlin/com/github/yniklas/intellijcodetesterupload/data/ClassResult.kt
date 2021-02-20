@@ -1,6 +1,6 @@
 package com.github.yniklas.intellijcodetesterupload.data
 
-import java.util.*
+import java.util.Objects
 
 data class ClassResult(val className: String, val results: Array<TestResult>) {
     override fun equals(other: Any?): Boolean {
@@ -10,5 +10,4 @@ data class ClassResult(val className: String, val results: Array<TestResult>) {
     override fun hashCode(): Int {
         return Objects.hash(className, results.hashCode())
     }
-
 }

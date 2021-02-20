@@ -13,5 +13,4 @@ class ToolwindoFactory : ToolWindowFactory {
 
         toolWindow.contentManager.addContent(content)
     }
-
 }
