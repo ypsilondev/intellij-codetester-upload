@@ -5,6 +5,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 class CodeTesterSettingsComponent(project: Project) {
 
@@ -14,7 +15,9 @@ class CodeTesterSettingsComponent(project: Project) {
     init {
         cb.isSelected = CodeTesterSetting.getInstance(project).uniProject
 
-        panel = FormBuilder.createFormBuilder().addLabeledComponent(JBLabel("Use this project for Codetester"), cb)
+        panel = FormBuilder.createFormBuilder()
+            .addLabeledComponent(JBLabel("Use this project for Codetester"), cb)
+            .addComponentFillVertically(JPanel(), 0)
             .panel
     }
 
