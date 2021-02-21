@@ -4,6 +4,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
 
 @State(
@@ -15,8 +16,8 @@ class CodeTesterSetting : PersistentStateComponent<CodeTesterSetting> {
     var uniProject = false
 
     companion object {
-        fun getInstance(): CodeTesterSetting {
-            return ServiceManager.getService(CodeTesterSetting::class.java)
+        fun getInstance(project: Project): CodeTesterSetting {
+            return ServiceManager.getService(project, CodeTesterSetting::class.java)
         }
     }
 

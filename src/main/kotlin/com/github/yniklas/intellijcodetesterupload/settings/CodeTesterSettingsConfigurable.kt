@@ -7,7 +7,7 @@ import com.intellij.openapi.wm.impl.ToolWindowsPane
 import com.intellij.ui.content.ContentFactory
 import javax.swing.JComponent
 
-class CodeTesterSettingsConfigurable : Configurable {
+class CodeTesterSettingsConfigurable(private val project: Project) : Configurable {
 
     private var component: CodeTesterSettingsComponent? = null
 
@@ -22,7 +22,7 @@ class CodeTesterSettingsConfigurable : Configurable {
      * @see .disposeUIResources
      */
     override fun createComponent(): JComponent {
-        component = CodeTesterSettingsComponent()
+        component = CodeTesterSettingsComponent(project)
         return component!!.getPanel()
     }
 
@@ -33,7 +33,7 @@ class CodeTesterSettingsConfigurable : Configurable {
      * @return `true` if the settings were modified, `false` otherwise
      */
     override fun isModified(): Boolean {
-        val settings: CodeTesterSetting = CodeTesterSetting.getInstance()
+        val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
 
         return settings.uniProject != component?.isSelected()
     }
@@ -45,12 +45,12 @@ class CodeTesterSettingsConfigurable : Configurable {
      * @throws ConfigurationException if values cannot be applied
      */
     override fun apply() {
-        val settings: CodeTesterSetting = CodeTesterSetting.getInstance()
+        val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
         settings.uniProject = component!!.isSelected()
     }
 
     override fun reset() {
-        val settings: CodeTesterSetting = CodeTesterSetting.getInstance()
+        val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
         settings.uniProject = false
     }
 

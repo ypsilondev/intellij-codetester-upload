@@ -8,7 +8,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSetting"/>
+        <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSetting"/>
         <projectConfigurable parentId="tools"
                              instance="com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSettingsConfigurable"
                              id="com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSettingsConfigurable"

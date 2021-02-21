@@ -22,7 +22,7 @@ class ToolwindoFactory : ToolWindowFactory {
     }
 
     override fun isApplicable(project: Project): Boolean {
-        return CodeTesterSetting.getInstance().uniProject
+        return CodeTesterSetting.getInstance(project).uniProject
     }
 
 }
