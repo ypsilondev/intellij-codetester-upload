@@ -1,4 +1,4 @@
-package com.github.yniklas.intellijcodetesterupload.services
+package com.github.yniklas.intellijcodetesterupload.settings
 
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.ServiceManager

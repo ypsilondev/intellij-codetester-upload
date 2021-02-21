@@ -1,6 +1,6 @@
 package com.github.yniklas.intellijcodetesterupload.toolwindow
 
-import com.github.yniklas.intellijcodetesterupload.services.CodeTesterSetting
+import com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSetting
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory

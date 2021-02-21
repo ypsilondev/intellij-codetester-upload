@@ -1,4 +1,4 @@
-package com.github.yniklas.intellijcodetesterupload.services
+package com.github.yniklas.intellijcodetesterupload.settings
 
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel

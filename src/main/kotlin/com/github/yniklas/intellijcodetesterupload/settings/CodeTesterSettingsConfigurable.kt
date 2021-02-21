@@ -1,7 +1,10 @@
-package com.github.yniklas.intellijcodetesterupload.services
+package com.github.yniklas.intellijcodetesterupload.settings
 
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.openapi.wm.impl.ToolWindowsPane
+import com.intellij.ui.content.ContentFactory
 import javax.swing.JComponent
 
 class CodeTesterSettingsConfigurable : Configurable {
@@ -43,7 +46,6 @@ class CodeTesterSettingsConfigurable : Configurable {
      */
     override fun apply() {
         val settings: CodeTesterSetting = CodeTesterSetting.getInstance()
-
         settings.uniProject = component!!.isSelected()
     }
 

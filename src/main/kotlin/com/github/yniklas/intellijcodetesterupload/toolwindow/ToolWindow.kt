@@ -7,6 +7,9 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
+import com.intellij.execution.filters.CompositeFilter
+import com.intellij.execution.filters.Filter
+import com.intellij.execution.filters.RegexpFilter
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
@@ -22,6 +25,9 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.*
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.impl.ToolWindowsPane
+import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBPanelWithEmptyText
 import com.intellij.ui.components.JBScrollPane
 import okhttp3.Request
 import okhttp3.Response
@@ -40,6 +46,7 @@ import okhttp3.MultipartBody
 
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.jsoup.select.NodeFilter
 import java.awt.Color
 import java.awt.Container
 import java.net.SocketTimeoutException
@@ -57,7 +64,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
         private const val BYTE_ARRAY_SIZE = 4092
     }
 
-    private val toolWindowPane: JComponent = JPanel()
+    private val toolWindowPane: JComponent = JBPanel<JBPanelWithEmptyText>()
     private val contentPane: Container = JPanel()
     var scrollPane = JBScrollPane()
 
@@ -318,7 +325,8 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     }
 
     private fun getConsoleWindow(toolWindow: ToolWindow, name: String): ConsoleView {
-        val consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).console
+        val consoleViewBuilder = TextConsoleBuilderFactory.getInstance().createBuilder(project)
+        val consoleView = consoleViewBuilder.console
         val content = toolWindow.contentManager.factory.createContent(consoleView.component, name, false)
         toolWindow.contentManager.addContent(content)
 
