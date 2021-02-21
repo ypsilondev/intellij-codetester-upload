@@ -40,7 +40,7 @@ class AllTestToolWindow(project: Project) {
     }
 
     private fun showTests() {
-        if (taskSelection.selectedItem == null) {
+        if (taskSelection.selectedItem == "Choose Task") {
             return
         }
 
