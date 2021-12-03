@@ -1,1 +1,1 @@
-rootProject.name = "intellij-codetester-upload"
+rootProject.name = "codetester-upload"

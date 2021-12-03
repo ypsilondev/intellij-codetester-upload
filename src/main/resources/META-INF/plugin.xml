@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>com.github.yniklas.intellijcodetesterupload</id>
-    <name>intellij-codetester-upload</name>
+    <name>Codetester Upload</name>
     <vendor>ypsilon</vendor>
 
     <!-- Product and plugin compatibility requirements -->
