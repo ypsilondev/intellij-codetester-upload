@@ -161,6 +161,9 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
     private fun testCode() {
         if (taskSelection.selectedItem == chooseTask) {
+            ApplicationManager.getApplication().invokeAndWait {
+                Messages.showErrorDialog("You have to select a task first", "Select a Task First")
+            }
             return
         }
 
