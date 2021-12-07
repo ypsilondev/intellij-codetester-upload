@@ -14,6 +14,7 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 class CodeTesterSetting : PersistentStateComponent<CodeTesterSetting> {
 
     var uniProject = false
+    var saveBeforeTesting = true
 
     companion object {
         fun getInstance(project: Project): CodeTesterSetting {
