@@ -2,8 +2,10 @@ package com.github.yniklas.intellijcodetesterupload.toolwindow
 
 import com.github.yniklas.intellijcodetesterupload.data.TestCase
 import com.google.gson.JsonParser
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.containers.stream
 import okhttp3.*
@@ -41,7 +43,9 @@ class AllTestToolWindow(project: Project) {
 
     private fun showTests() {
         if (taskSelection.selectedItem == "Choose Task") {
-            return
+            ApplicationManager.getApplication().invokeAndWait {
+                Messages.showErrorDialog("You have to select a task first", "Select a Task First")
+            }
         }
 
         contentPane.remove(scrollPane)
