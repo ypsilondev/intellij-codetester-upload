@@ -3,19 +3,15 @@ package com.github.yniklas.intellijcodetesterupload.toolwindow
 import com.github.yniklas.intellijcodetesterupload.data.ClassResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResultMessage
+import com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSetting
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.intellij.credentialStore.CredentialAttributes
-import com.intellij.credentialStore.Credentials
-import com.intellij.execution.filters.CompositeFilter
-import com.intellij.execution.filters.Filter
-import com.intellij.execution.filters.RegexpFilter
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
-import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
@@ -25,12 +21,10 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.*
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.impl.ToolWindowsPane
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBPanelWithEmptyText
 import com.intellij.ui.components.JBScrollPane
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.io.File
 import java.io.FileOutputStream
@@ -46,7 +40,6 @@ import okhttp3.MultipartBody
 
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.asRequestBody
-import org.jsoup.select.NodeFilter
 import java.awt.Color
 import java.awt.Container
 import java.net.SocketTimeoutException
@@ -96,6 +89,12 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     }
 
     private fun getZipStream(): File {
+        if (CodeTesterSetting.getInstance(project).saveBeforeTesting) {
+            ApplicationManager.getApplication().invokeAndWait {
+                FileDocumentManager.getInstance().saveAllDocuments()
+            }
+        }
+
         val selectedFiles = FileEditorManager.getInstance(project).selectedFiles
 
         if (selectedFiles.isEmpty()) {
@@ -161,6 +160,9 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
     private fun testCode() {
         if (taskSelection.selectedItem == chooseTask) {
+            ApplicationManager.getApplication().invokeAndWait {
+                Messages.showErrorDialog("You have to select a task first", "Select a Task First")
+            }
             return
         }
 
@@ -214,7 +216,7 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
 
         for (jsonElement in responseTasks) {
             val taskName = jsonElement.asJsonObject.get("name").asString
-            val taskId = jsonElement.asJsonObject.get("id").asInt;
+            val taskId = jsonElement.asJsonObject.get("id").asInt
             // Show only tasks from this and last year
             if (Network.parseDates(taskName)) {
                 taskSelection.addItem(taskName)

@@ -10,13 +10,16 @@ import javax.swing.JPanel
 class CodeTesterSettingsComponent(project: Project) {
 
     private val panel: JComponent
-    private val cb = JBCheckBox()
+    private val useCheckBox = JBCheckBox()
+    private val saveBeforeTestCheckBox = JBCheckBox()
 
     init {
-        cb.isSelected = CodeTesterSetting.getInstance(project).uniProject
+        useCheckBox.isSelected = CodeTesterSetting.getInstance(project).uniProject
+        saveBeforeTestCheckBox.isSelected = CodeTesterSetting.getInstance(project).saveBeforeTesting
 
         panel = FormBuilder.createFormBuilder()
-            .addLabeledComponent(JBLabel("Use this project for Codetester"), cb)
+            .addLabeledComponent(JBLabel("Use this project for Codetester"), useCheckBox)
+            .addLabeledComponent(JBLabel("Save all files before testing"), saveBeforeTestCheckBox)
             .addComponentFillVertically(JPanel(), 0)
             .panel
     }
@@ -26,11 +29,23 @@ class CodeTesterSettingsComponent(project: Project) {
     }
 
     fun getPreferredFocusedComponent(): JComponent{
-        return cb
+        return useCheckBox
     }
 
-    fun isSelected(): Boolean {
-        return cb.isSelected
+    fun isUseSelected(): Boolean {
+        return useCheckBox.isSelected
+    }
+
+    fun isSaveBeforeTestSelected(): Boolean {
+        return saveBeforeTestCheckBox.isSelected
+    }
+
+    fun setUseSelected(newValue: Boolean) {
+        useCheckBox.isSelected = newValue
+    }
+
+    fun setSaveBeforeTesting(newValue: Boolean) {
+        saveBeforeTestCheckBox.isSelected = newValue
     }
 
 }
