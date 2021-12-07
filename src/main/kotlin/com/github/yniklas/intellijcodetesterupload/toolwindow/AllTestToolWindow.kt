@@ -12,7 +12,6 @@ import okhttp3.*
 import java.util.*
 import java.util.stream.Collectors
 import javax.swing.*
-import kotlin.collections.ArrayList
 
 class AllTestToolWindow(project: Project) {
     private val project = project
