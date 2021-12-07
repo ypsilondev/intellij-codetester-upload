@@ -4,18 +4,16 @@
 
 ## [Unreleased]
 
-## Added
+### Added
 
-## Changed
+### Changed
 
-## Fixes
+### Fixes
 
 ## [0.0.1]
 ### Added
 - Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)
 
 ## [0.2.0]
-
-## Added
-
+### Added
 - All files will now automatically save before tests are run. This can be disabled in the settings.
