@@ -3,6 +3,7 @@ package com.github.yniklas.intellijcodetesterupload.toolwindow
 import com.github.yniklas.intellijcodetesterupload.data.ClassResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResultMessage
+import com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSetting
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.credentialStore.CredentialAttributes
@@ -16,6 +17,7 @@ import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.icons.AllIcons
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.Project
@@ -96,6 +98,12 @@ class ToolWindow(project: Project, toolWindow: ToolWindow) {
     }
 
     private fun getZipStream(): File {
+        if (CodeTesterSetting.getInstance(project).saveBeforeTesting) {
+            ApplicationManager.getApplication().invokeAndWait {
+                FileDocumentManager.getInstance().saveAllDocuments()
+            }
+        }
+
         val selectedFiles = FileEditorManager.getInstance(project).selectedFiles
 
         if (selectedFiles.isEmpty()) {

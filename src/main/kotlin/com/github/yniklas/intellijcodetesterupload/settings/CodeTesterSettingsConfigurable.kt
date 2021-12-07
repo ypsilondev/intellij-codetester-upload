@@ -2,9 +2,6 @@ package com.github.yniklas.intellijcodetesterupload.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.openapi.wm.impl.ToolWindowsPane
-import com.intellij.ui.content.ContentFactory
 import javax.swing.JComponent
 
 class CodeTesterSettingsConfigurable(private val project: Project) : Configurable {
@@ -35,7 +32,8 @@ class CodeTesterSettingsConfigurable(private val project: Project) : Configurabl
     override fun isModified(): Boolean {
         val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
 
-        return settings.uniProject != component?.isSelected()
+        return settings.uniProject != component?.isUseSelected()
+                || settings.saveBeforeTesting != component?.isSaveBeforeTestSelected()
     }
 
     /**
@@ -46,12 +44,14 @@ class CodeTesterSettingsConfigurable(private val project: Project) : Configurabl
      */
     override fun apply() {
         val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
-        settings.uniProject = component!!.isSelected()
+        settings.uniProject = component!!.isUseSelected()
+        settings.saveBeforeTesting = component!!.isSaveBeforeTestSelected()
     }
 
     override fun reset() {
         val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
-        settings.uniProject = false
+        component!!.setUseSelected(settings.uniProject)
+        component!!.setSaveBeforeTesting(settings.saveBeforeTesting)
     }
 
     override fun getPreferredFocusedComponent(): JComponent {
