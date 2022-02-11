@@ -14,7 +14,7 @@
                              id="com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSettingsConfigurable"
                              displayName="Code Tester Settings"
                              nonDefaultProject="true"/>
-        <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.ProjectService"/>
+        <!-- <projectService serviceImplementation="com.github.yniklas.intellijcodetesterupload.services.ProjectService"/> -->
         <toolWindow id="CodeTester" secondary="false" anchor="right" icon="AllIcons.Actions.Colors"
                     factoryClass="com.github.yniklas.intellijcodetesterupload.toolwindow.ToolwindoFactory"/>
     </extensions>

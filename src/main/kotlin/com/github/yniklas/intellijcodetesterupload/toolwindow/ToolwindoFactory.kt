@@ -10,7 +10,7 @@ class ToolwindoFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val cf = ContentFactory.SERVICE.getInstance()
 
-        val tw = ToolWindow(project, toolWindow)
+        val tw = ToolWindow(project)
         val content = cf.createContent(tw.getContent(), "Check Code", false)
 
         toolWindow.contentManager.addContent(content)
