@@ -1,6 +1,7 @@
 package com.github.yniklas.intellijcodetesterupload.toolwindow
 
 import com.github.yniklas.intellijcodetesterupload.api.ApiInteraction
+import com.github.yniklas.intellijcodetesterupload.api.Network
 import com.github.yniklas.intellijcodetesterupload.data.ClassResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResult
 import com.github.yniklas.intellijcodetesterupload.data.TestResultMessage
@@ -42,7 +43,7 @@ class ToolWindow(project: Project) {
     private val taskSelection = ComboBox(ArrayList<String>().toArray())
     private val project: Project
     private var tasks = HashMap<String, Int>()
-    private val testBt = JButton("Test code")
+    private val testBt = JButton("Login")
 
     init {
         taskSelection.addItem(chooseTask)
@@ -51,9 +52,8 @@ class ToolWindow(project: Project) {
 
         toolWindowPane.layout = BoxLayout(toolWindowPane, BoxLayout.PAGE_AXIS)
 
-        tasks = ApiInteraction.queryTasks(project)
-        for (task in tasks) {
-            taskSelection.addItem(task.key)
+        if (Network.isLoggedIn()) {
+            fillTasks()
         }
 
         // Initialize the Upload Button
@@ -66,7 +66,25 @@ class ToolWindow(project: Project) {
         toolWindowPane.revalidate()
     }
 
+    private fun fillTasks() {
+        tasks = ApiInteraction.queryTasks(project)
+        for (task in tasks) {
+            taskSelection.addItem(task.key)
+        }
+    }
+
     private fun testCode() {
+        if (!ToolwindoFactory.checkLoggedIn(project)) {
+            return
+        }
+
+        if (tasks.size == 0) {
+            fillTasks()
+            testBt.text = "Test code"
+            toolWindowPane.revalidate()
+            return
+        }
+
         if (taskSelection.selectedItem == chooseTask) {
             ApplicationManager.getApplication().invokeAndWait {
                 Messages.showErrorDialog("You have to select a task first", "Select a Task First")

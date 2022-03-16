@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
 import com.intellij.ide.passwordSafe.PasswordSafe
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import okhttp3.*
@@ -27,18 +28,15 @@ class Network {
         private val cAttr = CredentialAttributes("codetester")
         private var tasks: JsonArray? = null
 
+        fun isLoggedIn(): Boolean {
+            return PasswordSafe.instance.get(cAttr)?.getPasswordAsString() != null
+        }
+
         fun getRToken(project: Project): String? {
             var rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
 
             if (rToken == null) {
-                val username = Messages.showInputDialog(project, "Input username", "Credentials",
-                    Messages.getInformationIcon())
-                val password = Messages.showPasswordDialog(project, "Input password", "Credentials",
-                    Messages.getInformationIcon())
-
-                if (username == null || password == null || !validate(username, password)) {
-                    return null
-                }
+                throw LoginException("No password found in safe")
             }
 
             rToken = PasswordSafe.instance.get(cAttr)?.getPasswordAsString()
@@ -58,7 +56,7 @@ class Network {
             return authenticationObject.get("token")?.asString
         }
 
-        private fun validate(username: String, password: String): Boolean {
+        fun validate(username: String, password: String): Boolean {
             val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
                 .addFormDataPart("username", username)
                 .addFormDataPart("password", password).build()
@@ -70,7 +68,9 @@ class Network {
             val resAsJson = JsonParser.parseString(res.body?.string()).asJsonObject
 
             if (resAsJson.has("error")) {
-                Messages.showErrorDialog(resAsJson.get("error").asString, "Error")
+                ApplicationManager.getApplication().invokeAndWait {
+                    Messages.showErrorDialog(resAsJson.get("error").asString, "Error")
+                }
             } else if (resAsJson.has("token")) {
                 val cAttr = CredentialAttributes("codetester")
                 val creds = Credentials("token",resAsJson.get("token").asString)

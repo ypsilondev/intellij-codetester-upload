@@ -19,7 +19,7 @@ class AllTestToolWindow(private val project: Project) {
 
     private val taskSelection = ComboBox(ArrayList<String>().toArray())
     private var tasks = HashMap<String, Int>()
-    private val queryAllTests = JButton("List tests")
+    private val queryAllTests = JButton("Login")
 
     init {
         contentPane.layout = BoxLayout(contentPane, BoxLayout.PAGE_AXIS)
@@ -28,9 +28,8 @@ class AllTestToolWindow(private val project: Project) {
 
         taskSelection.addItem("Choose Task")
 
-        tasks = ApiInteraction.queryTasks(project)
-        for (task in tasks) {
-            taskSelection.addItem(task.key)
+        if (Network.isLoggedIn()) {
+            fillTasks()
         }
 
         subPanel.add(taskSelection)
@@ -41,7 +40,25 @@ class AllTestToolWindow(private val project: Project) {
         contentPane.revalidate()
     }
 
+    private fun fillTasks() {
+        tasks = ApiInteraction.queryTasks(project)
+        for (task in tasks) {
+            taskSelection.addItem(task.key)
+        }
+    }
+
     private fun showTests() {
+        if (!ToolwindoFactory.checkLoggedIn(project)) {
+            return
+        }
+
+        if (tasks.size == 0) {
+            fillTasks()
+            queryAllTests.text = "Choose Task"
+            contentPane.revalidate()
+            return
+        }
+
         if (taskSelection.selectedItem == "Choose Task") {
             ApplicationManager.getApplication().invokeAndWait {
                 Messages.showErrorDialog("You have to select a task first", "Select a Task First")
