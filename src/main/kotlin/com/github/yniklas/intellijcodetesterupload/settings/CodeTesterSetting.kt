@@ -13,7 +13,7 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 )
 class CodeTesterSetting : PersistentStateComponent<CodeTesterSetting> {
 
-    var uniProject = false
+    var uniProject = true
     var saveBeforeTesting = true
 
     companion object {
