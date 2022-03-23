@@ -1,29 +1,25 @@
 package com.github.yniklas.intellijcodetesterupload.toolwindow
 
-import com.github.yniklas.intellijcodetesterupload.data.TestCase
-import com.google.gson.JsonParser
+import com.github.yniklas.intellijcodetesterupload.api.ApiInteraction
+import com.github.yniklas.intellijcodetesterupload.api.Network
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.containers.stream
-import okhttp3.*
 import java.util.*
 import java.util.stream.Collectors
 import javax.swing.*
 
-class AllTestToolWindow(project: Project) {
-    private val project = project
+class AllTestToolWindow(private val project: Project) {
     private val contentPane: JComponent = JPanel()
     private var scrollPane = JBScrollPane()
     private var header = JLabel()
 
     private val taskSelection = ComboBox(ArrayList<String>().toArray())
-    private val tasks = HashMap<String, Int>()
-    private val queryAllTests = JButton("List tests")
-
-    private val allTestsUrl = "https://codetester.ialistannen.de/checks/get-all"
+    private var tasks = HashMap<String, Int>()
+    private val queryAllTests = JButton("Login")
 
     init {
         contentPane.layout = BoxLayout(contentPane, BoxLayout.PAGE_AXIS)
@@ -31,7 +27,11 @@ class AllTestToolWindow(project: Project) {
         subPanel.add(JLabel("List all Tests after choosing the Task"))
 
         taskSelection.addItem("Choose Task")
-        queryTasks()
+
+        if (Network.isLoggedIn()) {
+            fillTasks()
+        }
+
         subPanel.add(taskSelection)
         contentPane.add(subPanel)
 
@@ -40,7 +40,25 @@ class AllTestToolWindow(project: Project) {
         contentPane.revalidate()
     }
 
+    private fun fillTasks() {
+        tasks = ApiInteraction.queryTasks(project)
+        for (task in tasks) {
+            taskSelection.addItem(task.key)
+        }
+    }
+
     private fun showTests() {
+        if (!ToolwindoFactory.checkLoggedIn(project)) {
+            return
+        }
+
+        if (tasks.size == 0) {
+            fillTasks()
+            queryAllTests.text = "Choose Task"
+            contentPane.revalidate()
+            return
+        }
+
         if (taskSelection.selectedItem == "Choose Task") {
             ApplicationManager.getApplication().invokeAndWait {
                 Messages.showErrorDialog("You have to select a task first", "Select a Task First")
@@ -50,7 +68,7 @@ class AllTestToolWindow(project: Project) {
         contentPane.remove(scrollPane)
         contentPane.remove(header)
         queryAllTests.isEnabled = false
-        var allTests = getAllTests()
+        var allTests = Network.getAllTests(project)
         queryAllTests.isEnabled = true
 
         allTests = allTests.stream()
@@ -69,52 +87,6 @@ class AllTestToolWindow(project: Project) {
         scrollPane = JBScrollPane(panel)
         contentPane.add(scrollPane)
         contentPane.revalidate()
-    }
-
-    private fun queryTasks() {
-        val responseTasks = Network.queryTasks(project)
-
-        for (jsonElement in responseTasks) {
-            val taskName = jsonElement.asJsonObject.get("name").asString
-            val taskId = jsonElement.asJsonObject.get("id").asInt
-
-            // Show only tasks from this and last year
-            if (Network.parseDates(taskName)) {
-                taskSelection.addItem(taskName)
-                tasks[taskName] = taskId
-            }
-        }
-
-    }
-
-    private fun getAllTests(): Array<TestCase> {
-        val bearer = Network.getRToken(project)
-        val testCases = ArrayList<TestCase>()
-
-        if (bearer != null) {
-            val request = Request.Builder().url(allTestsUrl)
-                .header("Authorization", "Bearer $bearer").get().build()
-
-            val response: Response = OkHttpClient().newBuilder().build().newCall(request).execute()
-            val responseTests = JsonParser.parseString(response.body?.string()).asJsonArray
-
-            if (responseTests != null) {
-                for (rtRaw in responseTests) {
-                    val rt = rtRaw.asJsonObject
-                    testCases.add(TestCase(
-                        rt.get("id").asInt,
-                        rt.get("name").asString,
-                        rt.get("creator").asString,
-                        rt.get("checkType").asString,
-                        rt.get("approved").asBoolean,
-                        rt.get("creationTime").asLong,
-                        rt.get("category").asJsonObject.get("id").asInt,
-                        rt.get("category").asJsonObject.get("name").asString)
-                    )
-                }
-            }
-        }
-        return testCases.toArray(arrayOf<TestCase>())
     }
 
     fun getContentPane(): JComponent {
