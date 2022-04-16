@@ -1,6 +1,7 @@
 package com.github.yniklas.intellijcodetesterupload.api
 
 import com.github.yniklas.intellijcodetesterupload.data.TestCase
+import com.github.yniklas.intellijcodetesterupload.settings.CodeTesterSetting
 import com.google.gson.JsonArray
 import com.google.gson.JsonParser
 import com.intellij.credentialStore.CredentialAttributes
@@ -135,7 +136,8 @@ class Network {
             val bearer = getRToken(project)
 
             if (bearer != null) {
-                val client = OkHttpClient().newBuilder().connectTimeout(TIMEOUT, TimeUnit.SECONDS).build()
+                val client = OkHttpClient().newBuilder()
+                    .connectTimeout(CodeTesterSetting.getInstance(project).timeoutInSeconds, TimeUnit.SECONDS).build()
 
                 val body: RequestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
                     .addFormDataPart(

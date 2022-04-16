@@ -15,6 +15,7 @@ class CodeTesterSetting : PersistentStateComponent<CodeTesterSetting> {
 
     var uniProject = true
     var saveBeforeTesting = true
+    var timeoutInSeconds = 30L
 
     companion object {
         fun getInstance(project: Project): CodeTesterSetting {

@@ -34,6 +34,7 @@ class CodeTesterSettingsConfigurable(private val project: Project) : Configurabl
 
         return settings.uniProject != component?.isUseSelected()
                 || settings.saveBeforeTesting != component?.isSaveBeforeTestSelected()
+                || settings.timeoutInSeconds != component?.getTimeoutInSeconds()
     }
 
     /**
@@ -46,12 +47,14 @@ class CodeTesterSettingsConfigurable(private val project: Project) : Configurabl
         val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
         settings.uniProject = component!!.isUseSelected()
         settings.saveBeforeTesting = component!!.isSaveBeforeTestSelected()
+        settings.timeoutInSeconds = component!!.getTimeoutInSeconds()
     }
 
     override fun reset() {
         val settings: CodeTesterSetting = CodeTesterSetting.getInstance(project)
         component!!.setUseSelected(settings.uniProject)
         component!!.setSaveBeforeTesting(settings.saveBeforeTesting)
+        component!!.setTimeout(settings.timeoutInSeconds)
     }
 
     override fun getPreferredFocusedComponent(): JComponent {
