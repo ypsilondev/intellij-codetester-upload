@@ -14,7 +14,7 @@
 - [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
 
 <!-- Plugin description -->
-Allows "CodeTester" access via IntelliJ
+This plugin allows use to interact with the Simple Code Tester by I Al Istannen. You can upload your code and get the test results back and you can list all test available for a given task.
 <!-- Plugin description end -->
 
 ## Installation
