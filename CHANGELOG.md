@@ -30,3 +30,7 @@
 ## [0.3.2]
 ### Changed
 - Updated to IntelliJ 2022.2
+
+## [0.3.3]
+### Changed
+- Updated to IntelliJ 2022.3
